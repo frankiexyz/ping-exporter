@@ -2,9 +2,12 @@
 Prometheus Ping exporter
 
 Install pyping
+```
 pip install pyping
+```
 
 Append the following in prometheus's config
+```
   - job_name: 'ping-exporter'
     scrape_interval: 60s
     metrics_path: /
@@ -24,3 +27,4 @@ Append the following in prometheus's config
         regex: .*
         target_label: __address__
         replacement: <Your exporter IP>:9095  
+```
