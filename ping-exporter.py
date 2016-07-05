@@ -25,14 +25,14 @@ def get_status_code(host):
         curl = pycurl.Curl()
         buff = cStringIO.StringIO()
         hdr = cStringIO.StringIO()
-        curl.setopt(pycurl.URL, 'https://'+host+'/')
+        curl.setopt(pycurl.URL, 'http://'+host+'/')
         curl.setopt(pycurl.WRITEFUNCTION, buff.write)
-        curl.setopt(pycurl.USERAGENT, 'Mozilla/5.0 (Windows NT 6.1;
-WOW64; rv:8.0) Gecko/20100101 Firefox/8.0')
+        curl.setopt(pycurl.USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:8.0) Gecko/20100101 Firefox/8.0')
         curl.setopt(pycurl.HEADERFUNCTION, hdr.write)
         curl.perform()
         output=[]
-        output.append("state_code "+str(curl.getinfo(pycurl.HTTP_CODE)))
+        output.append("status_code "+str(curl.getinfo(pycurl.HTTP_CODE)))
+        output.append('')
         return output
 
 def ping_host(host):
@@ -55,8 +55,8 @@ class GetHandler(BaseHTTPRequestHandler):
         parsed_path = urlparse.urlparse(self.path)
         print parsed_path.query
         if "&" in parsed_path.query:
-                domain=parsed_path.query.split('&')[0].split('=')[1]
-                module=parsed_path.query.split('&')[1].split('=')[1]
+                domain=parsed_path.query.split('&')[1].split('=')[1]
+                module=parsed_path.query.split('&')[0].split('=')[1]
                 message = '\n'.join(get_status_code(domain))
         else:
                 domain=parsed_path.query.split('=')[1]
@@ -66,10 +66,9 @@ class GetHandler(BaseHTTPRequestHandler):
         self.wfile.write(message)
         return
 
-
-
 if __name__ == '__main__':
     from BaseHTTPServer import HTTPServer
     server = HTTPServer(('0.0.0.0', 9095), GetHandler)
     print 'Starting server, use <Ctrl-C> to stop'
- 
+    server.serve_forever()
+
