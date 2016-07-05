@@ -1,9 +1,10 @@
 # ping-exporter
 Prometheus Ping exporter
 
-Install pyping
+Install pyping and pycurl
 ```
 pip install pyping
+pip install pycurl or apt-get install python-pycurl
 ```
 
 Append the following in prometheus's config
