@@ -1,11 +1,14 @@
 #!/usr/bin/env python
-from BaseHTTPServer import BaseHTTPRequestHandler
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from SocketServer import ThreadingMixIn
+import threading
 import socket
 import pyping
 import urlparse
 import pycurl
 import cStringIO
 import re
+import ping
 
 def is_valid_ipv4_address(address):
     try:
@@ -36,19 +39,24 @@ def get_status_code(host):
         return output
 
 def ping_host(host):
+	print "Ping to "+host
         if is_valid_ipv4_address(host):
-                r=pyping.ping(host,count=5)
+                percent_lost, mrtt, artt=ping.quiet_ping(host,count=5)
         else:
                 ip=socket.gethostbyname(host)
-                r=pyping.ping(ip,count=5)
+		print ip
+                percent_lost, mrtt, artt=ping.quiet_ping(ip,count=5)
         output=[]
-        output.append("ping_avg "+r.avg_rtt)
-        output.append("ping_max "+r.max_rtt)
-        output.append("ping_min "+r.min_rtt)
-        output.append("ping_loss "+str(r.packet_lost))
+	print "AVG "+str(artt)
+        output.append("ping_avg "+str(artt))
+        output.append("ping_max "+str(mrtt))
+        output.append("ping_loss "+str(percent_lost))
         output.append('')
         return output
 
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Handle requests in a separate thread."""
 
 class GetHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -67,8 +75,7 @@ class GetHandler(BaseHTTPRequestHandler):
         return
 
 if __name__ == '__main__':
-    from BaseHTTPServer import HTTPServer
-    server = HTTPServer(('0.0.0.0', 9095), GetHandler)
+    server = ThreadedHTTPServer(('0.0.0.0', 9095), GetHandler)
     print 'Starting server, use <Ctrl-C> to stop'
     server.serve_forever()
 
