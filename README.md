@@ -1,17 +1,21 @@
 # ping-exporter
 Prometheus Ping exporter
 
-Install pyping and pycurl
-```
-pip install pyping
-pip install pycurl or apt-get install python-pycurl
-```
+A simple python script call fping(require version 4.0) and parse the output to allow prometheus scrape it. And you can generate a nice graph with Grafana easily.
+
+![alt text](https://ifconfig.xyz/file/ping.png)
+
+For Debian user, you can get the fping deb file from http://ftp.debian.org/debian/pool/main/f/fping/fping_4.0-1_armhf.deb
+
+PS: The script is working fine with > 40 ping target in a PI 3B.
 
 Append the following in prometheus's config
 ```
   - job_name: 'ping-exporter'
     scrape_interval: 60s
-    metrics_path: /
+    metrics_path: /probe
+    params:                                         
+         prot: ['4']                  
     target_groups:
       - targets:
           - www.ifconfig.xyz
@@ -27,5 +31,5 @@ Append the following in prometheus's config
       - source_labels: []
         regex: .*
         target_label: __address__
-        replacement: <Your exporter IP>:9095  
+        replacement: <Your exporter IP>:8085  
 ```

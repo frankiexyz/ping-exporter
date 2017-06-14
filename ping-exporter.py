@@ -2,80 +2,56 @@
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from SocketServer import ThreadingMixIn
 import threading
-import socket
-import pyping
-import urlparse
-import pycurl
-import cStringIO
-import re
-import ping
+import sys
+import subprocess
+from urlparse import parse_qs, urlparse
 
-def is_valid_ipv4_address(address):
-    try:
-        socket.inet_pton(socket.AF_INET, address)
-    except AttributeError:  # no inet_pton here, sorry
-        try:
-            socket.inet_aton(address)
-        except socket.error:
-            return False
-        return address.count('.') == 3
-    except socket.error:  # not a valid address
-        return False
-
-    return True
-
-def get_status_code(host):
-        curl = pycurl.Curl()
-        buff = cStringIO.StringIO()
-        hdr = cStringIO.StringIO()
-        curl.setopt(pycurl.URL, 'http://'+host+'/')
-        curl.setopt(pycurl.WRITEFUNCTION, buff.write)
-        curl.setopt(pycurl.USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:8.0) Gecko/20100101 Firefox/8.0')
-        curl.setopt(pycurl.HEADERFUNCTION, hdr.write)
-        curl.perform()
-        output=[]
-        output.append("status_code "+str(curl.getinfo(pycurl.HTTP_CODE)))
-        output.append('')
-        return output
-
-def ping_host(host):
-	print "Ping to "+host
-        if is_valid_ipv4_address(host):
-                percent_lost, mrtt, artt=ping.quiet_ping(host,count=5)
-        else:
-                ip=socket.gethostbyname(host)
-		print ip
-                percent_lost, mrtt, artt=ping.quiet_ping(ip,count=5)
-        output=[]
-	print "AVG "+str(artt)
-        output.append("ping_avg "+str(artt))
-        output.append("ping_max "+str(mrtt))
-        output.append("ping_loss "+str(percent_lost))
-        output.append('')
-        return output
-
+def ping(host, v6, count):
+    if v6:
+        ping_command = '/usr/bin/fping -6 -i 1 -p 500 -q -c {} {}'.format(count, host)
+    else:
+        ping_command = '/usr/bin/fping -4 -i 1 -p 500 -q -c {} {}'.format(count, host)
+    output = []
+    cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
+    loss = cmd_output[1].split("%")[1].split("/")[2]
+    min = cmd_output[1].split("=")[2].split("/")[0]
+    avg = cmd_output[1].split("=")[2].split("/")[1]
+    max = cmd_output[1].split("=")[2].split("/")[2].split("\n")[0]
+    output.append("ping_avg {}".format(avg))
+    output.append("ping_max {}".format(max))
+    output.append("ping_min {}".format(min))
+    output.append("ping_loss {}".format(loss))
+    output.append('')
+    return output
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """Handle requests in a separate thread."""
 
 class GetHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        parsed_path = urlparse.urlparse(self.path)
-        print parsed_path.query
-        if "&" in parsed_path.query:
-                domain=parsed_path.query.split('&')[1].split('=')[1]
-                module=parsed_path.query.split('&')[0].split('=')[1]
-                message = '\n'.join(get_status_code(domain))
+        parsed_path = urlparse(self.path).query
+        value = parse_qs(parsed_path)
+        address = value['target'][0]
+        if "count" in value:
+            count = value['count'][0]
         else:
-                domain=parsed_path.query.split('=')[1]
-                message = '\n'.join(ping_host(domain))
+            count = 10
+        if "prot" not in value:
+                message = '\n'.join(ping(address, False, count))
+        elif value['prot'][0] == "4":
+                message = '\n'.join(ping(address, False, count))
+        elif value['prot'][0] == "6":
+                message = '\n'.join(ping(address, True, count))
         self.send_response(200)
         self.end_headers()
         self.wfile.write(message)
         return
 
 if __name__ == '__main__':
-    server = ThreadedHTTPServer(('0.0.0.0', 9095), GetHandler)
-    print 'Starting server, use <Ctrl-C> to stop'
+    if len(sys.argv) >= 3:
+        port = int(sys.argv[2])
+    else:
+        port = 8085
+    print 'Starting server port {}, use <Ctrl-C> to stop'.format(port)
+    server = ThreadedHTTPServer(('0.0.0.0', port), GetHandler)
     server.serve_forever()
-
