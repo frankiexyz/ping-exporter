@@ -7,6 +7,8 @@ A simple python script call fping(require version 4.0) and parse the output to a
 
 For Debian user, you can get the fping deb file from http://ftp.debian.org/debian/pool/main/f/fping/fping_4.0-1_armhf.deb
 
+For docker user, you can build the container with the Dockerfile(based on alpine around 54M). For arm user, you can change FROM to "armhf/alpine"
+
 PS: The script is working fine with > 40 ping target in a PI 3B.
 
 Append the following in prometheus's config
