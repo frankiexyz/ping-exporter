@@ -3,7 +3,7 @@ Prometheus Ping exporter
 
 A simple python script call fping(require version 4.0) and parse the output to allow prometheus scrape it. And you can generate a nice graph with Grafana easily.
 
-![alt text](https://ifconfig.xyz/file/ping.png)
+![alt text](https://raw.githubusercontent.com/frankiexyz/ping-exporter/master/ping.png)
 
 For Debian user, you can get the fping deb file from http://ftp.debian.org/debian/pool/main/f/fping/fping_4.0-1_armhf.deb
 
