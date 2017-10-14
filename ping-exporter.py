@@ -6,12 +6,20 @@ import sys
 import subprocess
 from urlparse import parse_qs, urlparse
 import logging
+import os
+
+def locate(file):
+    #Find the path for fping
+    for path in os.environ["PATH"].split(os.pathsep):
+        if os.path.exists(os.path.join(path, file)):
+                return os.path.join(path, file)
+    return "{}".format(file)
 
 def ping(host, v6, count, size):
     if v6:
-        ping_command = '/usr/bin/fping -6 -b {} -i 1 -p 500 -q -c {} {}'.format(size, count, host)
+        ping_command = '{} -6 -b {} -i 1 -p 500 -q -c {} {}'.format(filepath, size, count, host)
     else:
-        ping_command = '/usr/bin/fping -4 -b {} -i 1 -p 500 -q -c {} {}'.format(size, count, host)
+        ping_command = '{} -4 -b {} -i 1 -p 500 -q -c {} {}'.format(filepath, size, count, host)
     output = []
     logger.debug(ping_command)
     cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
@@ -54,6 +62,8 @@ class GetHandler(BaseHTTPRequestHandler):
         return
 
 if __name__ == '__main__':
+    global filepath
+    filepath = locate("fping")
     logger = logging.getLogger()
     if len(sys.argv) >= 3:
         port = int(sys.argv[2])
