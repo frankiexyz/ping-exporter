@@ -112,8 +112,8 @@ You might want to add or change the following parameters in params's section to 
          # Default Is IPv4, Can Be Changed To IPv6   
          prot: ['4']
          
-         # Ping Packet Size (Default value is 100) 
-         size: ['100']         
+         # Ping Packet Size (Default value is 56) 
+         size: ['56']         
          
          # Ping Count (Default value is 10 times)
          count: ['10']
