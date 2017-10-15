@@ -35,3 +35,29 @@ Append the following in prometheus's config
         target_label: __address__
         replacement: <Your exporter IP>:8085  
 ```
+
+You might change the following parameters in params's section
+IPv4/IPv6
+```
+    params:                                         
+         prot: ['4']                  
+
+```
+Ping packet size(Default value is 100)
+```
+    params:                                         
+         size: ['100']                 
+
+```
+Ping count(Default value is 10 times)
+```
+    params:                                         
+         count: ['5']                 
+
+```
+Ping interval(Default value is 500ms)
+```
+    params:                                         
+         interval: ['250']                 
+
+```
