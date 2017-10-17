@@ -13,7 +13,7 @@ Prometheus Ping Exporter is a simple python script which utilize fping to probe 
 
 For Debian user, you can get the fping deb file from http://ftp.debian.org/debian/pool/main/f/fping/fping_4.0-1_armhf.deb
 
-For docker user, you can build the container with the Docker file (based on alpine around 54M). For arm user, you can change FROM to "armhf/alpine"
+For docker user, you can build the container with the Docker file (based on alpine around 54M). For arm user, you can change FROM to "armhf/alpine:edge"
 
 PS: The script is working fine with > 40 ping target in a PI 3B.
 
