@@ -6,7 +6,7 @@ Prometheus Ping Exporter is a simple python script which utilize fping to probe 
 
 **Requirements**
 - Python 2.x
-- Fping 4.x
+- fping 4.x
 
 **Screenshots**
 ![alt text](https://raw.githubusercontent.com/frankiexyz/ping-exporter/master/ping.png)
