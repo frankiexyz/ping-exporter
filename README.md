@@ -85,9 +85,9 @@ Append the following in prometheus's config (Default is prometheus.yml)
   - job_name: 'ping-exporter'
     scrape_interval: 60s
     metrics_path: /probe
-    params:                                         
-         prot: ['4']                  
-    target_groups:
+    params:
+         prot: ['4']
+    static_configs:
       - targets:
           - www.ifconfig.xyz
           - www.google.com
@@ -102,22 +102,22 @@ Append the following in prometheus's config (Default is prometheus.yml)
       - source_labels: []
         regex: .*
         target_label: __address__
-        replacement: <Your exporter IP>:8085  
+        replacement: <Your exporter IP>:8085
 ```
 
 You might want to add or change the following parameters in params's section to match your requirements
 
 ```
     params:
-         # Default Is IPv4, Can Be Changed To IPv6   
+         # Default Is IPv4, Can Be Changed To IPv6
          prot: ['4']
-         
-         # Ping Packet Size (Default value is 56) 
-         size: ['56']         
-         
+
+         # Ping Packet Size (Default value is 56)
+         size: ['56']
+
          # Ping Count (Default value is 10 times)
          count: ['10']
-         
+
          Ping Interval (Default value is 500ms)
          interval: ['500']
 ```
