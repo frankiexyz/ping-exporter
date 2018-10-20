@@ -15,13 +15,13 @@ def locate(file):
                 return os.path.join(path, file)
     return "{}".format(file)
 
-def ping(host, v6, interval, count, size):
-    #For fping v6 command
-    if v6:
-        ping_command = '{} -6 -b {} -i 1 -p {} -q -c {} {}'.format(filepath, size, interval, count, host)
-    #For fping v4 command
+def ping(host, prot, interval, count, size, source):
+    # Using source address?
+    if source == '':
+        ping_command = '{} -{} -b {} -i 1 -p {} -q -c {} {}'.format(filepath, prot, size, interval, count, host)
     else:
-        ping_command = '{} -4 -b {} -i 1 -p {} -q -c {} {}'.format(filepath, size, interval, count, host)
+        ping_command = '{} -{} -b {} -i 1 -p {} -q -c {} -S {} {}'.format(filepath, prot, size, interval, count, source, host)
+
     output = []
     #Log the actual ping command for debug purpose
     logger.info(ping_command)
@@ -56,6 +56,16 @@ class GetHandler(BaseHTTPRequestHandler):
         value = parse_qs(parsed_path)
         #Retrieve the ping target
         address = value['target'][0]
+        #Retrieve source address
+        if "source" in value:
+            source = value['source'][0]
+        else:
+            source = ''
+        #Retrieve prot
+        if "prot" in value:
+            prot = value['prot'][0]
+        else:
+            prot = 4
         #Retrieve ping count
         if "count" in value:
             count = value['count'][0]
@@ -71,13 +81,8 @@ class GetHandler(BaseHTTPRequestHandler):
             interval = value['interval'][0]
         else:
             interval = 500
-        #Check if it is a IPv4/IPv6 target
-        if "prot" not in value:
-                message = '\n'.join(ping(address, False, interval, count, size))
-        elif value['prot'][0] == "4":
-                message = '\n'.join(ping(address, False, interval, count, size))
-        elif value['prot'][0] == "6":
-                message = '\n'.join(ping(address, True, interval, count, size))
+
+        message = '\n'.join(ping(address, prot, interval, count, size, source))
         #Prepare HTTP status code
         self.send_response(200)
         self.end_headers()

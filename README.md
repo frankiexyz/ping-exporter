@@ -1,5 +1,47 @@
 # ping-exporter
 
+## CSC fork
+
+Fork of ping-exporter to support -S flag to fping. This allows specifying source address for pings. Useful for hosts with multiple interfaces/network routes.
+
+Adds the source param.
+
+Prometheus configuration example where the job pings a single destination but from multiple source addresses to determin the quality of each route / path:
+
+```
+- job_name: 'ping-exporter'
+  scrape_interval: 60s
+  metrics_path: /probe
+  params:
+       prot: ['4']
+       count: ['3']
+       target: ['207.225.112.9']
+  static_configs:
+    - targets:
+        - 192.168.101.2
+        - 192.168.102.2
+        - 192.168.103.2
+        - 192.168.104.2
+  relabel_configs:
+    - source_labels: [__address__]
+      target_label: __param_source
+      replacement: ${1}
+    - source_labels: [__param_target]
+      regex: (.*)
+      target_label: instance
+      replacement: ${1}
+    - source_labels: [__param_source]
+      regex: (.*)
+      target_label: source
+      replacement: ${1}
+    - source_labels: []
+      regex: .*
+      target_label: __address__
+      replacement: localhost:8085
+```
+
+
+
 ## Introduction
 
 Prometheus Ping Exporter is a simple python script which utilize fping to probe endpoint through ICMP and parsing the output to Prometheus. The result can then be visualize through Grafana with ease.
@@ -21,7 +63,7 @@ PS: The script is working fine with > 40 ping target in a PI 3B.
 
 1. Download ping-exporter.py and place it inside /opt/
 ```
-# cd /opt/ 
+# cd /opt/
 # curl  -O https://raw.githubusercontent.com/frankiexyz/ping-exporter/master/ping-exporter.py
 ```
 
