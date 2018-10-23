@@ -21,7 +21,7 @@ PS: The script is working fine with > 40 ping target in a PI 3B.
 
 1. Download ping-exporter.py and place it inside /opt/
 ```
-# cd /opt/ 
+# cd /opt/
 # curl  -O https://raw.githubusercontent.com/frankiexyz/ping-exporter/master/ping-exporter.py
 ```
 
@@ -118,6 +118,43 @@ You might want to add or change the following parameters in params's section to 
          # Ping Count (Default value is 10 times)
          count: ['10']
 
-         Ping Interval (Default value is 500ms)
+         # Ping Interval (Default value is 500ms)
          interval: ['500']
+
+         # Source address for ping (System default used if not specified)
+         source: ['10.10.10.10']
+```
+
+Prometheus configuration example where the job pings a single destination (params:target) but from multiple source addresses (static_config:targets) to determine the quality of each route / path:
+
+```
+- job_name: 'ping-exporter'
+  scrape_interval: 60s
+  metrics_path: /probe
+  params:
+       prot: ['4']
+       count: ['3']
+       target: ['207.225.112.9']
+  static_configs:
+    - targets:
+        - 192.168.101.2
+        - 192.168.102.2
+        - 192.168.103.2
+        - 192.168.104.2
+  relabel_configs:
+    - source_labels: [__address__]
+      target_label: __param_source
+      replacement: ${1}
+    - source_labels: [__param_target]
+      regex: (.*)
+      target_label: instance
+      replacement: ${1}
+    - source_labels: [__param_source]
+      regex: (.*)
+      target_label: source
+      replacement: ${1}
+    - source_labels: []
+      regex: .*
+      target_label: __address__
+      replacement: localhost:8085
 ```
