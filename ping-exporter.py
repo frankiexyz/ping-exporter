@@ -34,7 +34,7 @@ def ping(host, prot, interval, count, size, source):
     size_cmd = ['-b', str(size)]
     count_cmd = ['-c', str(count)]
 
-    ping_command = filepath_cmd + version_cmd + quiet_cmd + size_cmd + count_cmd + host_cmd
+    ping_command = filepath_cmd + version_cmd + quiet_cmd + source_cmd + size_cmd + count_cmd + host_cmd
 
     output = []    
     logger.info(ping_command)
@@ -52,6 +52,7 @@ def ping(host, prot, interval, count, size, source):
     # example loss "192.1.1.1 : xmt/rcv/%loss = 10/0/100%"
     # https://www.debuggex.com/r/T5_Da8_kWGHpm8y1
     for ping in raw_outputs:
+        # logger.info(ping)
         match = re.search('(?P<ip_address>.*) :.*= \d+\/\d+\/(?P<loss>\d+)%(?:.*(?P<min>\d+\.?\d*)\/(?P<avg>\d+\.?\d*)\/(?P<max>\d+\.?\d*))?', ping)                
         if match is not None:       
             ip_address = match.group('ip_address').strip()
@@ -71,11 +72,7 @@ def ping(host, prot, interval, count, size, source):
             output.append("ping_loss_percent{{ip_address=\"{}\"}} {}".format(ip_address, loss))
 
         else:
-            ip_address = cmd_output.split(' :')[0]
-            loss = 100
-            min = 0
-            avg = 0
-            max = 0
+            continue
 
     return output
 
