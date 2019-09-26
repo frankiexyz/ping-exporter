@@ -7,6 +7,7 @@ import subprocess
 from urlparse import parse_qs, urlparse
 import logging
 import os
+import re
 
 def locate(file):
     #Find the path for fping
@@ -15,35 +16,67 @@ def locate(file):
                 return os.path.join(path, file)
     return "{}".format(file)
 
-def ping(host, prot, interval, count, size, source):
-    # Using source address?
-    if source == '':
-        ping_command = '{} -{} -b {} -i 1 -p {} -q -c {} {}'.format(filepath, prot, size, interval, count, host)
-    else:
-        ping_command = '{} -{} -b {} -i 1 -p {} -q -c {} -S {} {}'.format(filepath, prot, size, interval, count, source, host)
+def ping(host, prot, interval, count, size, source):    
+    filepath_cmd = [filepath]
+    host_cmd = [host]
+    # subnets are only supported for IPv4 due to the size of IPv6
+    if '/' in host and prot == 4:
+        # host = '-g {}'.format(host)
+        host_cmd = ['-g', host]   
+    
+    source_cmd = []
+    if source:
+        source_cmd = ['-S', source]
 
-    output = []
-    #Log the actual ping command for debug purpose
+    quiet_cmd = ['-q']
+    version_cmd = ['-{}'.format(prot)]
+    interval_cmd = ['-i', str(interval)]
+    size_cmd = ['-b', str(size)]
+    count_cmd = ['-c', str(count)]
+
+    ping_command = filepath_cmd + version_cmd + quiet_cmd + size_cmd + count_cmd + host_cmd
+
+    output = []    
     logger.info(ping_command)
-    #Execute the ping
-    cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
-    #Parse the fping output
-    try:
-        loss = cmd_output[1].split("%")[1].split("/")[2]
-        min = cmd_output[1].split("=")[2].split("/")[0]
-        avg = cmd_output[1].split("=")[2].split("/")[1]
-        max = cmd_output[1].split("=")[2].split("/")[2].split("\n")[0]
-    except IndexError:
-        loss = 100
-        min = 0
-        avg = 0
-        max = 0
-    #Prepare the metric
-    output.append("ping_avg {}".format(avg))
-    output.append("ping_max {}".format(max))
-    output.append("ping_min {}".format(min))
-    output.append("ping_loss {}".format(loss))
-    output.append('')
+
+    # Execute the ping
+    p = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)       
+    _, cmd_output = p.communicate()
+    if p.returncode > 2:
+        raise subprocess.CalledProcessError('oops')
+
+    raw_outputs = cmd_output.split('\n')
+
+    # Parse the fping output (tested on version 4.2)
+    # example ping "8.8.8.8 : xmt/rcv/%loss = 10/10/0%, min/avg/max = 0.72/0.82/1.42"
+    # example loss "192.1.1.1 : xmt/rcv/%loss = 10/0/100%"
+    # https://www.debuggex.com/r/T5_Da8_kWGHpm8y1
+    for ping in raw_outputs:
+        match = re.search('(?P<ip_address>.*) :.*= \d+\/\d+\/(?P<loss>\d+)%(?:.*(?P<min>\d+\.?\d*)\/(?P<avg>\d+\.?\d*)\/(?P<max>\d+\.?\d*))?', ping)                
+        if match is not None:       
+            ip_address = match.group('ip_address').strip()
+            loss = match.group('loss')
+            if (loss != "100"):
+                min_ms = match.group('min')
+                avg_ms = match.group('avg')
+                max_ms = match.group('max')
+            else:
+                min_ms = 0
+                avg_ms = 0
+                max_ms = 0        
+
+            output.append("ping_avg_ms{{ip_address=\"{}\"}} {}".format(ip_address, avg_ms))
+            output.append("ping_max_ms{{ip_address=\"{}\"}} {}".format(ip_address, max_ms))
+            output.append("ping_min_ms{{ip_address=\"{}\"}} {}".format(ip_address, min_ms))
+            output.append("ping_loss_percent{{ip_address=\"{}\"}} {}".format(ip_address, loss))
+
+        else:
+            ip_address = cmd_output.split(' :')[0]
+            loss = 100
+            min = 0
+            avg = 0
+            max = 0
+
     return output
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -53,9 +86,17 @@ class GetHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         #Parse the url
         parsed_path = urlparse(self.path).query
-        value = parse_qs(parsed_path)
-        #Retrieve the ping target
+        value = parse_qs(parsed_path)        
+        # Retrieve the ping target
+
+        if 'target' not in value:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write('missing target')
+            return
+
         address = value['target'][0]
+
         #Retrieve source address
         if "source" in value:
             source = value['source'][0]
@@ -80,9 +121,16 @@ class GetHandler(BaseHTTPRequestHandler):
         if "interval" in value and int(value['interval'][0]) > 1:
             interval = value['interval'][0]
         else:
-            interval = 500
+            interval = 25
 
-        message = '\n'.join(ping(address, prot, interval, count, size, source))
+        try:
+            message = '\n'.join(ping(address, prot, interval, count, size, source))
+        except subprocess.CalledProcessError as e:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write('command error: {}'.format(e))        
+            return
+
         #Prepare HTTP status code
         self.send_response(200)
         self.end_headers()
@@ -93,6 +141,7 @@ if __name__ == '__main__':
     #Locate the path of fping
     global filepath
     filepath = locate("fping")
+    # filepath = '/usr/local/sbin/fping'
     logger = logging.getLogger()
     handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
