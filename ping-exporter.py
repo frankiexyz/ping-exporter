@@ -18,15 +18,15 @@ def locate(file):
 def ping(host, prot, interval, count, size, source):
     # Using source address?
     if source == '':
-        ping_command = '{} -{} -b {} -i 1 -p {} -q -c {} {}'.format(filepath, prot, size, interval, count, host)
+        ping_command = [filepath, f'-{prot}', '-b', f'{size}', '-i', '1', '-p', f'{interval}', '-q', '-c', f'{count}', f'{host}']
     else:
-        ping_command = '{} -{} -b {} -i 1 -p {} -q -c {} -S {} {}'.format(filepath, prot, size, interval, count, source, host)
+        ping_command = [filepath, f'{prot}', '-b', f'{size}', '-i', '1', '-p', f'{interval}', '-q', '-c', f'{count}', '-S', f'{source}', f'{host}']
 
     output = []
     #Log the actual ping command for debug purpose
     logger.info(ping_command)
     #Execute the ping
-    cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
+    cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     #Parse the fping output
     try:
         loss = cmd_output[1].split("%")[1].split("/")[2]
