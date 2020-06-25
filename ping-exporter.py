@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from SocketServer import ThreadingMixIn
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 import threading
 import sys
 import subprocess
-from urlparse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse
 import logging
 import os
 
@@ -26,13 +26,13 @@ def ping(host, prot, interval, count, size, source):
     #Log the actual ping command for debug purpose
     logger.info(ping_command)
     #Execute the ping
-    cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
+    cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()[1].decode('ascii')
     #Parse the fping output
     try:
-        loss = cmd_output[1].split("%")[1].split("/")[2]
-        min = cmd_output[1].split("=")[2].split("/")[0]
-        avg = cmd_output[1].split("=")[2].split("/")[1]
-        max = cmd_output[1].split("=")[2].split("/")[2].split("\n")[0]
+        loss = cmd_output.split("%")[1].split("/")[2]
+        min = cmd_output.split("=")[2].split("/")[0]
+        avg = cmd_output.split("=")[2].split("/")[1]
+        max = cmd_output.split("=")[2].split("/")[2].split("\n")[0]
     except IndexError:
         loss = 100
         min = 0
@@ -86,7 +86,7 @@ class GetHandler(BaseHTTPRequestHandler):
         #Prepare HTTP status code
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(message)
+        self.wfile.write(message.encode('ascii'))
         return
 
 if __name__ == '__main__':
