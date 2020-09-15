@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from SocketServer import ThreadingMixIn
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 import threading
 import sys
 import subprocess
-from urlparse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse
 import logging
 import os
 
@@ -18,21 +18,22 @@ def locate(file):
 def ping(host, prot, interval, count, size, source):
     # Using source address?
     if source == '':
-        ping_command = '{} -{} -b {} -i 1 -p {} -q -c {} {}'.format(filepath, prot, size, interval, count, host)
+        ping_command = [filepath, f'-{prot}', '-b', f'{size}', '-i', '1', '-p', f'{interval}', '-q', '-c', f'{count}', f'{host}']
     else:
-        ping_command = '{} -{} -b {} -i 1 -p {} -q -c {} -S {} {}'.format(filepath, prot, size, interval, count, source, host)
+        ping_command = [filepath, f'{prot}', '-b', f'{size}', '-i', '1', '-p', f'{interval}', '-q', '-c', f'{count}', '-S', f'{source}', f'{host}']
 
     output = []
     #Log the actual ping command for debug purpose
     logger.info(ping_command)
     #Execute the ping
-    cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()
+    cmd_output = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     #Parse the fping output
     try:
-        loss = cmd_output[1].split("%")[1].split("/")[2]
-        min = cmd_output[1].split("=")[2].split("/")[0]
-        avg = cmd_output[1].split("=")[2].split("/")[1]
-        max = cmd_output[1].split("=")[2].split("/")[2].split("\n")[0]
+        stdout = cmd_output[1].decode('utf8')
+        loss = stdout.split("%")[1].split("/")[2]
+        min = stdout.split("=")[2].split("/")[0]
+        avg = stdout.split("=")[2].split("/")[1]
+        max = stdout.split("=")[2].split("/")[2].split("\n")[0]
     except IndexError:
         loss = 100
         min = 0
@@ -55,7 +56,12 @@ class GetHandler(BaseHTTPRequestHandler):
         parsed_path = urlparse(self.path).query
         value = parse_qs(parsed_path)
         #Retrieve the ping target
-        address = value['target'][0]
+        if "target" in value:
+            address = value['target'][0]
+        else:
+            self.send_response(500)
+            self.end_headers()
+            return 
         #Retrieve source address
         if "source" in value:
             source = value['source'][0]
@@ -86,7 +92,7 @@ class GetHandler(BaseHTTPRequestHandler):
         #Prepare HTTP status code
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(message)
+        self.wfile.write(message.encode('utf8'))
         return
 
 if __name__ == '__main__':
