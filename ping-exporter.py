@@ -56,7 +56,12 @@ class GetHandler(BaseHTTPRequestHandler):
         parsed_path = urlparse(self.path).query
         value = parse_qs(parsed_path)
         #Retrieve the ping target
-        address = value['target'][0]
+        if "target" in value:
+            address = value['target'][0]
+        else:
+            self.send_response(500)
+            self.end_headers()
+            return 
         #Retrieve source address
         if "source" in value:
             source = value['source'][0]
